@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+.env
+!.env.example
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Node
+node_modules/
+.next/
+.nuxt/
+dist/
+out/
+*.log
+npm-debug.log*
+.env.local
+!.env.local.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.lcov
+
+# Production artifacts
+*.pem
+*.key
+*.crt
+ssl/
+
+# Uploads / temp
+/tmp/
+*.tmp

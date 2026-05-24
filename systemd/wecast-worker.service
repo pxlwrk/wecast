@@ -1,0 +1,28 @@
+[Unit]
+Description=WeCast ARQ Background Worker (Transcription & Media Processing)
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=wecast
+Group=wecast
+WorkingDirectory=/opt/wecast/backend
+EnvironmentFile=/opt/wecast/backend/.env
+ExecStart=/opt/wecast/backend/.venv/bin/arq app.tasks.worker.WorkerSettings
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wecast-worker
+
+# Transcription is CPU-intensive – allow more resources
+CPUAccounting=true
+MemoryAccounting=true
+MemoryMax=4G
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

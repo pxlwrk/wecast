@@ -1,0 +1,26 @@
+[Unit]
+Description=WeCast MinIO Object Storage
+After=network.target
+
+[Service]
+Type=simple
+User=wecast
+Group=wecast
+WorkingDirectory=/opt/wecast/minio
+Environment=MINIO_ROOT_USER=wecast-admin
+Environment=MINIO_ROOT_PASSWORD=CHANGE_ME
+Environment=MINIO_VOLUMES=/data/wecast-minio
+ExecStart=/usr/local/bin/minio server ${MINIO_VOLUMES} \
+    --address 127.0.0.1:9000 \
+    --console-address 127.0.0.1:9001
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wecast-minio
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

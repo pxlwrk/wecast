@@ -1,0 +1,24 @@
+[Unit]
+Description=WeCast Frontend (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=wecast
+Group=wecast
+WorkingDirectory=/opt/wecast/frontend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/opt/wecast/frontend/.env.local
+ExecStart=/usr/bin/node .next/standalone/server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wecast-frontend
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

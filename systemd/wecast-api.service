@@ -1,0 +1,31 @@
+[Unit]
+Description=WeCast API (FastAPI / Uvicorn)
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=wecast
+Group=wecast
+WorkingDirectory=/opt/wecast/backend
+EnvironmentFile=/opt/wecast/backend/.env
+ExecStart=/opt/wecast/backend/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 4 \
+    --log-config /opt/wecast/backend/logging.json
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wecast-api
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/wecast/backend
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target
