@@ -6,11 +6,9 @@
 
 import { redirect } from "next/navigation";
 
-interface Props {
-  params: { code: string };
-}
+type Props = { params: Promise<{ code: string }> };
 
 export default async function ShortUrlPage({ params }: Props) {
-  // Redirect to API endpoint which issues 301
-  redirect(`/api/v1/s/${params.code}`);
+  const { code } = await params;
+  redirect(`/api/v1/s/${code}`);
 }

@@ -28,7 +28,7 @@ export default function VideoPlayer({ hlsUrl, subtitlesUrl, title, thumbnail }: 
   const [duration, setDuration] = useState(0);
   const [captionsOn, setCaptionsOn] = useState(true); // ON by default
   const [showControls, setShowControls] = useState(true);
-  const hideTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -83,7 +83,7 @@ export default function VideoPlayer({ hlsUrl, subtitlesUrl, title, thumbnail }: 
 
   function showControlsBriefly() {
     setShowControls(true);
-    clearTimeout(hideTimeout.current);
+    if (hideTimeout.current !== null) clearTimeout(hideTimeout.current);
     hideTimeout.current = setTimeout(() => {
       if (playing) setShowControls(false);
     }, 3000);

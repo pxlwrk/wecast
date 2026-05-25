@@ -7,9 +7,7 @@
 import type { Metadata } from "next";
 import VideoPlayer from "@/components/media/VideoPlayer";
 
-interface Props {
-  params: { id: string };
-}
+type Props = { params: Promise<{ id: string }> };
 
 async function getEmbedMeta(id: string) {
   const res = await fetch(
@@ -21,12 +19,14 @@ async function getEmbedMeta(id: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const meta = await getEmbedMeta(params.id);
+  const { id } = await params;
+  const meta = await getEmbedMeta(id);
   return { title: meta?.title ?? "Video" };
 }
 
 export default async function EmbedVideoPage({ params }: Props) {
-  const meta = await getEmbedMeta(params.id);
+  const { id } = await params;
+  const meta = await getEmbedMeta(id);
 
   if (!meta) {
     return (
