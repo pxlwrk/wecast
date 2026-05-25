@@ -18,6 +18,7 @@ dependencies = [
     # Auth & Security
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
+    "bcrypt==4.0.1",  # pin: passlib 1.7.x not compatible with bcrypt 4.1+
     "ldap3>=2.9.1",
     # Task Queue
     "arq>=0.26.1",
