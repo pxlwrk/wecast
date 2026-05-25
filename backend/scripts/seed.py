@@ -81,27 +81,17 @@ async def seed():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    async with Session() as db:
-        print("🗑️  Lösche bestehende Daten …")
-        # Use DELETE instead of TRUNCATE so it works even if some tables are empty
-        for table in ("audit_logs", "refresh_tokens", "short_urls",
-                       "episodes", "videos", "shows", "ldap_group_mappings", "users"):
-            try:
-                await db.execute(text(f"DELETE FROM {table}"))
-            except Exception:
-                pass  # table might not exist yet – create_all just handled it
-        try:
-            await db.execute(text(
-                "ALTER SEQUENCE users_id_seq RESTART WITH 1;"
-                "ALTER SEQUENCE shows_id_seq RESTART WITH 1;"
-                "ALTER SEQUENCE episodes_id_seq RESTART WITH 1;"
-                "ALTER SEQUENCE videos_id_seq RESTART WITH 1;"
-                "ALTER SEQUENCE short_urls_id_seq RESTART WITH 1;"
-            ))
-        except Exception:
-            pass
-        await db.commit()
+    # Use a raw connection for the cleanup so a failed statement
+    # never poisons the transaction that follows the inserts.
+    print("🗑️  Lösche bestehende Daten …")
+    async with engine.begin() as conn:
+        await conn.execute(text(
+            "TRUNCATE audit_logs, refresh_tokens, short_urls, episodes, "
+            "videos, shows, ldap_group_mappings, users "
+            "RESTART IDENTITY CASCADE"
+        ))
 
+    async with Session() as db:
         # ── Benutzer ─────────────────────────────────────────────────────────
         print("👤 Erstelle Benutzer …")
 
