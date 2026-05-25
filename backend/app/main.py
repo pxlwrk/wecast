@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
         title="WeCast API",
         description="Enterprise Media Portal – Podcasts & Videos",
         version="0.1.0",
+        redirect_slashes=False,  # avoid 307 when Next.js strips trailing slashes
         docs_url="/api/docs" if settings.DEBUG else None,
         redoc_url="/api/redoc" if settings.DEBUG else None,
         openapi_url="/api/openapi.json" if settings.DEBUG else None,
