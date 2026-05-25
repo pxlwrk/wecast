@@ -83,6 +83,7 @@ async def update_show(
     if body.is_public is not None:
         show.is_public = body.is_public
     await db.commit()
+    await db.refresh(show)
     return _show_to_schema(show)
 
 
