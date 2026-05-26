@@ -73,6 +73,7 @@ async def finish_recording(
 
     video.status = "processing"
     await db.commit()
+    await db.refresh(video)
 
     from arq import create_pool
     from arq.connections import RedisSettings

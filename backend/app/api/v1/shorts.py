@@ -19,6 +19,7 @@ router = APIRouter(tags=["short-urls"])
 
 
 @router.post("/shorts/", response_model=ShortUrlResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/shorts", response_model=ShortUrlResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def create_short_url(
     body: ShortUrlCreate,
     db: AsyncSession = Depends(get_db),
@@ -48,6 +49,7 @@ async def create_short_url(
 
 
 @router.get("/shorts/", response_model=List[ShortUrlResponse])
+@router.get("/shorts", response_model=List[ShortUrlResponse], include_in_schema=False)
 async def list_short_urls(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(get_current_user),

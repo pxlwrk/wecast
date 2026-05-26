@@ -40,6 +40,7 @@ async def update_me(
 
 
 @router.get("/", response_model=List[UserListItem], summary="List all users (admin)")
+@router.get("", response_model=List[UserListItem], include_in_schema=False)
 async def list_users(
     db: AsyncSession = Depends(get_db),
     _: CurrentUser = Depends(require_admin),

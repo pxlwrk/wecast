@@ -25,6 +25,7 @@ router = APIRouter(tags=["shows"])
 # ── Shows ─────────────────────────────────────────────────────────────────────
 
 @router.get("/shows/", response_model=List[ShowList])
+@router.get("/shows", response_model=List[ShowList], include_in_schema=False)
 async def list_shows(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(get_current_user),
@@ -35,6 +36,7 @@ async def list_shows(
 
 
 @router.post("/shows/", response_model=ShowDetail, status_code=status.HTTP_201_CREATED)
+@router.post("/shows", response_model=ShowDetail, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def create_show(
     body: ShowCreate,
     db: AsyncSession = Depends(get_db),
@@ -142,6 +144,7 @@ async def show_rss(slug: str, request: Request, db: AsyncSession = Depends(get_d
 # ── Episodes ──────────────────────────────────────────────────────────────────
 
 @router.get("/shows/{slug}/episodes/", response_model=List[EpisodeList])
+@router.get("/shows/{slug}/episodes", response_model=List[EpisodeList], include_in_schema=False)
 async def list_episodes(
     slug: str,
     db: AsyncSession = Depends(get_db),
@@ -155,6 +158,7 @@ async def list_episodes(
 
 
 @router.post("/shows/{slug}/episodes/", response_model=EpisodeDetail, status_code=status.HTTP_201_CREATED)
+@router.post("/shows/{slug}/episodes", response_model=EpisodeDetail, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def upload_episode(
     slug: str,
     title: str = Form(...),
@@ -203,6 +207,7 @@ async def upload_episode(
     episode.audio_path = audio_key
     episode.file_size = len(audio_data)
     await db.commit()
+    await db.refresh(episode)
 
     # Queue transcription task
     from arq import create_pool
@@ -245,6 +250,7 @@ async def update_episode(
         if body.status == "published" and not episode.published_at:
             episode.published_at = datetime.now(UTC)
     await db.commit()
+    await db.refresh(episode)
     return _episode_detail(episode)
 
 

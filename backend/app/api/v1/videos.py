@@ -20,6 +20,7 @@ router = APIRouter(prefix="/videos", tags=["videos"])
 
 
 @router.get("/", response_model=List[VideoList])
+@router.get("", response_model=List[VideoList], include_in_schema=False)
 async def list_videos(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(get_current_user),
@@ -114,6 +115,7 @@ async def update_video(
         if body.status == "published" and not video.published_at:
             video.published_at = datetime.now(UTC)
     await db.commit()
+    await db.refresh(video)
     return _video_detail(video)
 
 
