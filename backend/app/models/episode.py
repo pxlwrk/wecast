@@ -21,8 +21,9 @@ class Episode(Base):
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    # MinIO object path
+    # MinIO object paths
     audio_path: Mapped[Optional[str]] = mapped_column(String(1024))
+    cover_image_path: Mapped[Optional[str]] = mapped_column(String(1024))
     duration_sec: Mapped[Optional[int]] = mapped_column(Integer)
     file_size: Mapped[Optional[int]] = mapped_column(BigInteger)
     # Transcription

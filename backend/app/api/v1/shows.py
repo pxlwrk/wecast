@@ -29,9 +29,15 @@ async def list_shows(
     db: AsyncSession = Depends(get_db),
     current: CurrentUser = Depends(get_current_user),
 ) -> List[ShowList]:
-    result = await db.execute(select(Show).order_by(Show.title))
-    shows = result.scalars().all()
-    return [_show_to_schema(s) for s in shows]
+    # Fetch shows with episode counts in a single query
+    result = await db.execute(
+        select(Show, func.count(Episode.id).label("episode_count"))
+        .outerjoin(Episode, Episode.show_id == Show.id)
+        .group_by(Show.id)
+        .order_by(Show.title)
+    )
+    rows = result.all()
+    return [_show_to_schema(row[0], episode_count=row[1]) for row in rows]
 
 
 @router.post("/shows/", response_model=ShowDetail, status_code=status.HTTP_201_CREATED)
@@ -85,6 +91,58 @@ async def update_show(
     await db.commit()
     await db.refresh(show)
     return _show_to_schema(show)
+
+
+@router.post("/shows/{slug}/cover", response_model=ShowDetail)
+async def upload_show_cover(
+    slug: str,
+    cover: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(require_moderator),
+) -> ShowDetail:
+    """Upload or replace the cover image for a show."""
+    show = await _get_show_or_404(slug, db)
+
+    content_type = cover.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Image file required")
+
+    image_data = await cover.read()
+    ext = (cover.filename or "cover.jpg").rsplit(".", 1)[-1].lower()
+    cover_key = f"shows/{show.id}/cover.{ext}"
+    storage.upload_bytes(settings.MINIO_BUCKET_MEDIA, cover_key, image_data, content_type)
+
+    show.cover_image_path = cover_key
+    await db.commit()
+    await db.refresh(show)
+    return _show_to_schema(show)
+
+
+@router.post("/episodes/{episode_id}/cover", response_model=EpisodeDetail)
+async def upload_episode_cover(
+    episode_id: int,
+    cover: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current: CurrentUser = Depends(require_moderator),
+) -> EpisodeDetail:
+    """Upload or replace the cover image for an episode."""
+    episode = await db.get(Episode, episode_id)
+    if not episode:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Episode not found")
+
+    content_type = cover.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Image file required")
+
+    image_data = await cover.read()
+    ext = (cover.filename or "cover.jpg").rsplit(".", 1)[-1].lower()
+    cover_key = f"episodes/{episode.show_id}/{episode.id}/cover.{ext}"
+    storage.upload_bytes(settings.MINIO_BUCKET_MEDIA, cover_key, image_data, content_type)
+
+    episode.cover_image_path = cover_key
+    await db.commit()
+    await db.refresh(episode)
+    return _episode_detail(episode)
 
 
 @router.delete("/shows/{slug}", status_code=status.HTTP_204_NO_CONTENT)
@@ -271,7 +329,7 @@ async def _get_show_or_404(slug: str, db: AsyncSession) -> Show:
     return show
 
 
-def _show_to_schema(show: Show) -> ShowDetail:
+def _show_to_schema(show: Show, episode_count: int = 0) -> ShowDetail:
     cover_url = None
     if show.cover_image_path:
         cover_url = storage.get_presigned_download_url(
@@ -284,6 +342,7 @@ def _show_to_schema(show: Show) -> ShowDetail:
         description=show.description,
         cover_image_url=cover_url,
         is_public=show.is_public,
+        episode_count=episode_count,
         owner_id=show.owner_id,
         created_at=show.created_at,
         updated_at=show.updated_at,
@@ -296,6 +355,11 @@ def _episode_detail(episode: Episode) -> EpisodeDetail:
         audio_url = storage.get_presigned_download_url(
             settings.MINIO_BUCKET_MEDIA, episode.audio_path
         )
+    cover_url = None
+    if getattr(episode, "cover_image_path", None):
+        cover_url = storage.get_presigned_download_url(
+            settings.MINIO_BUCKET_MEDIA, episode.cover_image_path
+        )
     return EpisodeDetail(
         id=episode.id,
         show_id=episode.show_id,
@@ -304,6 +368,7 @@ def _episode_detail(episode: Episode) -> EpisodeDetail:
         description=episode.description,
         duration_sec=episode.duration_sec,
         audio_url=audio_url,
+        cover_image_url=cover_url,
         transcript_status=episode.transcript_status,
         transcript_json=episode.transcript_json,
         summary=episode.summary,

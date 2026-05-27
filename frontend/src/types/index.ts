@@ -44,6 +44,7 @@ export interface Episode {
   status: "draft" | "processing" | "published" | "error";
   published_at: string | null;
   created_at: string;
+  cover_image_url: string | null;
 }
 
 export interface EpisodeDetail extends Episode {
@@ -56,6 +57,7 @@ export interface EpisodeDetail extends Episode {
   summary: string | null;
   chapters_json: { title: string; start_sec: number }[] | null;
   updated_at: string;
+  cover_image_url: string | null;
 }
 
 // ── Videos ────────────────────────────────────────────────────────────────────
