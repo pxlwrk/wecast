@@ -37,7 +37,15 @@ async def list_shows(
         .order_by(Show.title)
     )
     rows = result.all()
-    return [_show_to_schema(row[0], episode_count=row[1]) for row in rows]
+    visible = [
+        (row[0], row[1]) for row in rows
+        if current.is_visible_in_list(
+            getattr(row[0], "visibility", "internal"),
+            getattr(row[0], "allowed_group_dns", None),
+            row[0].owner_id,
+        )
+    ]
+    return [_show_to_schema(row[0], episode_count=row[1]) for row in visible]
 
 
 @router.post("/shows/", response_model=ShowDetail, status_code=status.HTTP_201_CREATED)
@@ -55,7 +63,9 @@ async def create_show(
         title=body.title,
         slug=body.slug,
         description=body.description,
-        is_public=body.is_public,
+        is_public=body.visibility == "public",
+        visibility=body.visibility,
+        allowed_group_dns=body.allowed_group_dns,
         owner_id=current.user_id,
     )
     db.add(show)
@@ -88,6 +98,11 @@ async def update_show(
         show.description = body.description
     if body.is_public is not None:
         show.is_public = body.is_public
+    if body.visibility is not None:
+        show.visibility = body.visibility
+        show.is_public = (body.visibility == "public")
+    if body.allowed_group_dns is not None:
+        show.allowed_group_dns = body.allowed_group_dns
     await db.commit()
     await db.refresh(show)
     return _show_to_schema(show)
@@ -346,6 +361,8 @@ def _show_to_schema(show: Show, episode_count: int = 0) -> ShowDetail:
         owner_id=show.owner_id,
         created_at=show.created_at,
         updated_at=show.updated_at,
+        visibility=getattr(show, "visibility", "internal"),
+        allowed_group_dns=getattr(show, "allowed_group_dns", None),
     )
 
 

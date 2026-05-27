@@ -4,6 +4,8 @@ import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
+import type { Visibility } from "@/types";
+import VisibilityPicker from "@/components/ui/VisibilityPicker";
 import { ArrowLeft, Mic2, Upload, X } from "lucide-react";
 
 function slugify(text: string) {
@@ -21,13 +23,14 @@ export default function NewShowPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [title,       setTitle]       = useState("");
-  const [slug,        setSlug]        = useState("");
-  const [slugTouched, setSlugTouched] = useState(false);
-  const [description, setDescription] = useState("");
-  const [isPublic,    setIsPublic]    = useState(false);
-  const [coverFile,   setCoverFile]   = useState<File | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [title,         setTitle]         = useState("");
+  const [slug,          setSlug]          = useState("");
+  const [slugTouched,   setSlugTouched]   = useState(false);
+  const [description,   setDescription]   = useState("");
+  const [visibility,    setVisibility]    = useState<Visibility>("internal");
+  const [allowedGroups, setAllowedGroups] = useState<string[]>([]);
+  const [coverFile,     setCoverFile]     = useState<File | null>(null);
+  const [coverPreview,  setCoverPreview]  = useState<string | null>(null);
   const [error,   setError]   = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -52,7 +55,14 @@ export default function NewShowPage() {
     setError(null);
     setLoading(true);
     try {
-      const show = await api.shows.create({ title, slug, description: description || undefined, is_public: isPublic });
+      const show = await api.shows.create({
+        title,
+        slug,
+        description: description || undefined,
+        visibility,
+        allowed_group_dns: visibility === "restricted" ? allowedGroups : [],
+        is_public: visibility === "public",
+      });
 
       // Upload cover if selected
       if (coverFile) {
@@ -200,28 +210,12 @@ export default function NewShowPage() {
           />
         </div>
 
-        {/* Public toggle */}
-        <label className="flex items-start gap-3 cursor-pointer group">
-          <span className="relative mt-0.5">
-            <input
-              type="checkbox"
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-              className="sr-only peer"
-              aria-describedby="public-desc"
-            />
-            <span className="block w-11 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700
-                             peer-checked:bg-brand-600 transition-colors" />
-            <span className="absolute left-0.5 top-0.5 block w-5 h-5 rounded-full bg-white shadow
-                             translate-x-0 peer-checked:translate-x-5 transition-transform" />
-          </span>
-          <div>
-            <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Öffentlich zugänglich</span>
-            <p id="public-desc" className="text-xs text-zinc-500 mt-0.5">
-              Öffentliche Sendungen sind per RSS-Feed abrufbar.
-            </p>
-          </div>
-        </label>
+        {/* Visibility */}
+        <VisibilityPicker
+          value={visibility}
+          allowedGroups={allowedGroups}
+          onChange={(v, g) => { setVisibility(v); setAllowedGroups(g); }}
+        />
 
         {/* Actions */}
         <div className="flex items-center gap-3 pt-2">

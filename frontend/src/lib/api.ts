@@ -94,9 +94,9 @@ export const api = {
   shows: {
     list:    () => request<import("@/types").Show[]>("/shows/"),
     get:     (slug: string) => request<import("@/types").ShowDetail>(`/shows/${slug}`),
-    create:  (body: { title: string; slug: string; description?: string; is_public?: boolean }) =>
+    create:  (body: { title: string; slug: string; description?: string; is_public?: boolean; visibility?: string; allowed_group_dns?: string[] }) =>
       request<import("@/types").ShowDetail>("/shows/", { method: "POST", body: JSON.stringify(body) }),
-    update:  (slug: string, body: Partial<{ title: string; description: string; is_public: boolean }>) =>
+    update:  (slug: string, body: Partial<{ title: string; description: string; is_public: boolean; visibility: string; allowed_group_dns: string[] }>) =>
       request<import("@/types").ShowDetail>(`/shows/${slug}`, { method: "PATCH", body: JSON.stringify(body) }),
     delete:  (slug: string) => request<void>(`/shows/${slug}`, { method: "DELETE" }),
     episodes: (slug: string) => request<import("@/types").Episode[]>(`/shows/${slug}/episodes/`),
@@ -130,7 +130,7 @@ export const api = {
         { method: "POST" }
       ),
     triggerProcessing: (id: number) => request(`/videos/${id}/process`, { method: "POST" }),
-    update:           (id: number, body: Partial<{ title: string; description: string; status: string }>) =>
+    update:           (id: number, body: Partial<{ title: string; description: string; status: string; visibility: string; allowed_group_dns: string[] }>) =>
       request<import("@/types").VideoDetail>(`/videos/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
     delete:           (id: number) => request<void>(`/videos/${id}`, { method: "DELETE" }),
   },
@@ -161,5 +161,13 @@ export const api = {
   embed: {
     episode: (id: number) => request(`/embed/episode/${id}`),
     video:   (id: number) => request(`/embed/video/${id}`),
+  },
+
+  public: {
+    featured: () =>
+      fetch("/api/v1/public/featured").then((r) => {
+        if (!r.ok) throw new ApiError(r.status, "Failed to fetch featured");
+        return r.json() as Promise<import("@/types").FeaturedContent>;
+      }),
   },
 };

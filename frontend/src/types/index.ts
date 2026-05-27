@@ -1,4 +1,7 @@
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Visibility types ─────────────────────────────────────────────────────────
+export type Visibility = "public" | "internal" | "restricted" | "unlisted";
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export interface TokenPair {
   access_token: string;
   token_type: string;
@@ -24,6 +27,8 @@ export interface Show {
   description: string | null;
   cover_image_url: string | null;
   is_public: boolean;
+  visibility: Visibility;
+  allowed_group_dns: string[] | null;
   episode_count: number;
   created_at: string;
 }
@@ -71,6 +76,8 @@ export interface Video {
   transcode_status: "pending" | "processing" | "done" | "error";
   transcript_status: "pending" | "processing" | "done" | "error";
   status: "draft" | "uploading" | "processing" | "published" | "error" | "recording";
+  visibility: Visibility;
+  allowed_group_dns: string[] | null;
   is_recording: boolean;
   published_at: string | null;
   created_at: string;
@@ -93,4 +100,28 @@ export interface ShortUrl {
   visit_count: number;
   short_url: string;
   created_at: string;
+}
+
+// ── Public / Landing ─────────────────────────────────────────────────────────
+export interface PublicVideo {
+  id: number;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  duration_sec: number | null;
+  published_at: string | null;
+}
+
+export interface PublicShow {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  cover_image_url: string | null;
+  episode_count: number;
+}
+
+export interface FeaturedContent {
+  videos: PublicVideo[];
+  shows: PublicShow[];
 }

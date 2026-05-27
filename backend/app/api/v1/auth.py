@@ -58,6 +58,7 @@ async def login(
                 user.email = ldap_user.email
                 user.display_name = ldap_user.display_name
                 user.role = role
+                user.ldap_groups = ldap_user.groups[:100]  # cap at 100 groups
                 user.last_login = datetime.now(UTC)
             else:
                 user = User(
@@ -66,6 +67,7 @@ async def login(
                     email=ldap_user.email,
                     display_name=ldap_user.display_name,
                     role=role,
+                    ldap_groups=ldap_user.groups[:100],
                     last_login=datetime.now(UTC),
                 )
                 db.add(user)
@@ -92,7 +94,7 @@ async def login(
     await db.flush()
 
     # ── 3. Issue tokens ───────────────────────────────────────────────────────
-    access_token = create_access_token(user.id, user.role)
+    access_token = create_access_token(user.id, user.role, getattr(user, 'ldap_groups', []) or [])
     raw_refresh, token_hash = create_refresh_token(user.id)
 
     rt = RefreshToken(
@@ -165,7 +167,7 @@ async def refresh(
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User inactive")
 
-    access_token = create_access_token(user.id, user.role)
+    access_token = create_access_token(user.id, user.role, getattr(user, 'ldap_groups', []) or [])
     raw_refresh, new_hash = create_refresh_token(user.id)
 
     new_rt = RefreshToken(

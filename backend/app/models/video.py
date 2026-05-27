@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -33,6 +34,10 @@ class Video(Base):
     )
     # Whether this was captured via the built-in screen recorder
     is_recording: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Visibility: public | internal | restricted | unlisted
+    visibility: Mapped[str] = mapped_column(String(50), default="internal", nullable=False)
+    # AD group DNs allowed to access (only used when visibility="restricted")
+    allowed_group_dns: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     # Chunked upload state (for recordings)
     chunks_received: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     # Overall status: draft | processing | published | error

@@ -25,7 +25,16 @@ async def list_videos(
     current: CurrentUser = Depends(get_current_user),
 ) -> List[VideoList]:
     result = await db.execute(select(Video).order_by(Video.created_at.desc()))
-    return [_video_list(v) for v in result.scalars()]
+    videos = result.scalars().all()
+    visible = [
+        v for v in videos
+        if current.is_visible_in_list(
+            getattr(v, "visibility", "internal"),
+            getattr(v, "allowed_group_dns", None),
+            v.owner_id,
+        )
+    ]
+    return [_video_list(v) for v in visible]
 
 
 @router.post("/upload-url", response_model=PresignedUploadResponse, status_code=status.HTTP_201_CREATED,
@@ -113,6 +122,10 @@ async def update_video(
         video.status = body.status
         if body.status == "published" and not video.published_at:
             video.published_at = datetime.now(UTC)
+    if body.visibility is not None:
+        video.visibility = body.visibility
+    if body.allowed_group_dns is not None:
+        video.allowed_group_dns = body.allowed_group_dns
     await db.commit()
     return _video_detail(video)
 
@@ -147,6 +160,8 @@ def _video_list(v: Video) -> VideoList:
         transcode_status=v.transcode_status, transcript_status=v.transcript_status,
         status=v.status, is_recording=v.is_recording,
         published_at=v.published_at, created_at=v.created_at,
+        visibility=getattr(v, "visibility", "internal"),
+        allowed_group_dns=getattr(v, "allowed_group_dns", None),
     )
 
 
@@ -165,6 +180,8 @@ def _video_detail(v: Video) -> VideoDetail:
         transcript_status=v.transcript_status, status=v.status,
         is_recording=v.is_recording, owner_id=v.owner_id,
         published_at=v.published_at, created_at=v.created_at, updated_at=v.updated_at,
+        visibility=getattr(v, "visibility", "internal"),
+        allowed_group_dns=getattr(v, "allowed_group_dns", None),
     )
 
 
