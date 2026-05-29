@@ -34,7 +34,7 @@ def upgrade() -> None:
     # Users: add ldap_groups
     op.add_column("users",
         sa.Column("ldap_groups", postgresql.JSONB(astext_type=sa.Text()),
-                  nullable=False, server_default="'[]'::jsonb"))
+                  nullable=False, server_default=sa.text("'[]'::jsonb")))
 
 
 def downgrade() -> None:
