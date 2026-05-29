@@ -1,99 +1,177 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { use } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { api, ApiError } from "@/lib/api";
 import type { VideoDetail } from "@/types";
 import VideoPlayer from "@/components/media/VideoPlayer";
-import { ChevronLeft, Loader, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft, Clock, Copy, Check, AlertCircle, Loader2,
+  Video as VideoIcon
+} from "lucide-react";
 import { formatDuration } from "@/lib/auth";
 
-export default function VideoDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const { user } = useAuth();
-  const [video, setVideo] = useState<VideoDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+function StatusPill({ status }: { status: string }) {
+  const cls: Record<string, string> = {
+    published:  "badge-published",
+    processing: "badge-processing",
+    error:      "badge-error",
+    draft:      "badge-draft",
+    uploading:  "badge-uploading",
+    recording:  "badge-recording",
+  };
+  const labels: Record<string, string> = {
+    published:  "Veröffentlicht",
+    processing: "Verarbeitung läuft",
+    error:      "Fehler",
+    draft:      "Entwurf",
+    uploading:  "Hochladen",
+    recording:  "Aufnahme",
+  };
+  return <span className={cls[status] ?? "badge-pending"}>{labels[status] ?? status}</span>;
+}
+
+export default function VideoDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [video,    setVideo]    = useState<VideoDetail | null>(null);
+  const [loading,  setLoading]  = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [copied,   setCopied]   = useState(false);
 
   useEffect(() => {
     api.videos.get(Number(id))
       .then(setVideo)
-      .catch(() => setNotFound(true))
+      .catch((err) => { if (err instanceof ApiError && err.status === 404) setNotFound(true); })
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <p className="text-gray-500 text-sm" aria-busy="true">Wird geladen…</p>;
-  if (notFound || !video) return (
-    <div className="text-center py-16">
-      <p className="text-gray-500">Video nicht gefunden.</p>
-      <Link href="/videos" className="mt-4 inline-block text-sm text-brand-600 hover:underline">Zurück zu Videos</Link>
-    </div>
-  );
+  async function copyEmbedCode() {
+    const code = `<iframe src="${window.location.origin}/embed/video/${id}" width="800" height="450" title="${video?.title ?? "Video"}" allowfullscreen loading="lazy"></iframe>`;
+    await navigator.clipboard.writeText(code).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
-  const isProcessing = video.status === "processing" || video.transcode_status === "processing";
-  const hasError = video.status === "error";
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-up max-w-4xl mx-auto">
+        <div className="skeleton h-5 w-28" />
+        <div className="skeleton aspect-video rounded-2xl" />
+        <div className="space-y-2">
+          <div className="skeleton h-7 w-2/3" />
+          <div className="skeleton h-4 w-full" />
+          <div className="skeleton h-4 w-3/4" />
+        </div>
+      </div>
+    );
+  }
+
+  if (notFound || !video) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-zinc-500">Video nicht gefunden.</p>
+        <Link href="/videos" className="btn-primary mt-4 inline-flex">Zurück</Link>
+      </div>
+    );
+  }
+
+  const isPlayable = video.status === "published" && !!video.hls_url;
 
   return (
-    <div className="max-w-3xl">
-      <Link href="/videos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 mb-4">
-        <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-up">
+      {/* Back */}
+      <Link href="/videos" className="btn-ghost -ml-2 inline-flex">
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         Alle Videos
       </Link>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-4">{video.title}</h1>
-
-      {isProcessing && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4 flex items-center gap-3">
-          <Loader className="w-4 h-4 text-yellow-600 animate-spin flex-shrink-0" aria-hidden="true" />
-          <p className="text-sm text-yellow-800">Dieses Video wird gerade verarbeitet. Bitte einen Moment warten.</p>
-        </div>
-      )}
-
-      {hasError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center gap-3">
-          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" aria-hidden="true" />
-          <p className="text-sm text-red-700">Bei der Verarbeitung ist ein Fehler aufgetreten.</p>
-        </div>
-      )}
-
-      {video.hls_url ? (
+      {/* Player or placeholder */}
+      {isPlayable ? (
         <VideoPlayer
-          hlsUrl={video.hls_url}
+          hlsUrl={video.hls_url!}
           subtitlesUrl={video.subtitles_url}
           title={video.title}
           thumbnail={video.thumbnail_url}
         />
       ) : (
-        <div className="aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
-          {video.thumbnail_url ? (
-            <img src={video.thumbnail_url} alt="" aria-hidden="true" className="w-full h-full object-cover rounded-xl" />
+        <div className="card aspect-video flex flex-col items-center justify-center gap-3
+                        bg-zinc-100 dark:bg-zinc-900">
+          {video.status === "processing" ? (
+            <>
+              <Loader2 className="w-10 h-10 text-zinc-400 animate-spin" aria-hidden="true" />
+              <p className="text-sm text-zinc-500">Video wird verarbeitet…</p>
+              <p className="text-xs text-zinc-400">Die Seite bitte nach einigen Minuten neu laden.</p>
+            </>
+          ) : video.status === "error" ? (
+            <>
+              <AlertCircle className="w-10 h-10 text-red-400" aria-hidden="true" />
+              <p className="text-sm text-zinc-500">Bei der Verarbeitung ist ein Fehler aufgetreten.</p>
+            </>
           ) : (
-            <p className="text-gray-400 text-sm">{isProcessing ? "Wird verarbeitet…" : "Kein Video verfügbar"}</p>
+            <>
+              <VideoIcon className="w-10 h-10 text-zinc-300" aria-hidden="true" />
+              <p className="text-sm text-zinc-500">Video noch nicht verfügbar</p>
+            </>
           )}
         </div>
       )}
 
-      <div className="mt-4 bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-        {video.description && <p className="text-sm text-gray-700">{video.description}</p>}
-        <div className="flex flex-wrap gap-3 text-xs text-gray-400">
-          {video.duration_sec && <span>Dauer: {formatDuration(video.duration_sec)}</span>}
-          <span>Status: {video.status}</span>
-          {video.is_recording && <span className="text-purple-600">Bildschirmaufnahme</span>}
+      {/* Info */}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3 justify-between flex-wrap">
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{video.title}</h1>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <StatusPill status={video.status} />
+              {video.duration_sec && (
+                <span className="flex items-center gap-1 text-xs text-zinc-500">
+                  <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                  {formatDuration(video.duration_sec)}
+                </span>
+              )}
+              {video.subtitles_url && (
+                <span className="badge-done">Untertitel</span>
+              )}
+              {video.transcript_status === "done" && (
+                <span className="badge-done">Transkript</span>
+              )}
+            </div>
+          </div>
+
+          {/* Share / Embed */}
+          {isPlayable && (
+            <button
+              onClick={copyEmbedCode}
+              className="btn-secondary flex-shrink-0"
+              aria-label="Embed-Code kopieren"
+            >
+              {copied
+                ? <><Check className="w-4 h-4 text-emerald-500" aria-hidden="true" /> Kopiert!</>
+                : <><Copy  className="w-4 h-4" aria-hidden="true" /> Embed-Code</>}
+            </button>
+          )}
         </div>
-        {(user?.role === "admin" || user?.role === "moderator") && video.status === "draft" && (
-          <button
-            onClick={async () => {
-              await api.videos.update(video.id, { status: "published" });
-              setVideo({ ...video, status: "published" });
-            }}
-            className="mt-2 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-          >
-            Veröffentlichen
-          </button>
+
+        {video.description && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{video.description}</p>
         )}
       </div>
+
+      {/* Processing status detail */}
+      {video.status === "processing" && (
+        <div className="card p-4 flex items-center gap-3
+                        bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+          <Loader2 className="w-5 h-5 text-amber-500 flex-shrink-0 animate-spin" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Video wird verarbeitet</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              HLS-Transkodierung und Transkription laufen im Hintergrund.
+              Die Seite nach einigen Minuten neu laden.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

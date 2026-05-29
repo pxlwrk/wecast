@@ -1,11 +1,7 @@
 /**
- * Layout for unauthenticated routes (login, etc.)
- * No navigation shell — just a centered card area.
+ * Auth layout – renders children directly.
+ * The login page manages its own full-screen background.
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }

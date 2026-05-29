@@ -9,12 +9,16 @@ class ShowCreate(BaseModel):
     slug: str = Field(..., min_length=1, max_length=255, pattern=r"^[a-z0-9-]+$")
     description: Optional[str] = None
     is_public: bool = False
+    visibility: str = "internal"
+    allowed_group_dns: Optional[list[str]] = None
 
 
 class ShowUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     is_public: Optional[bool] = None
+    visibility: Optional[str] = None
+    allowed_group_dns: Optional[list[str]] = None
 
 
 class ShowList(BaseModel):
@@ -26,6 +30,8 @@ class ShowList(BaseModel):
     is_public: bool
     episode_count: int = 0
     created_at: datetime
+    visibility: str = "internal"
+    allowed_group_dns: Optional[list[str]] = None
 
     model_config = {"from_attributes": True}
 

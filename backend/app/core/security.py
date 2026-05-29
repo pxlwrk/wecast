@@ -33,11 +33,12 @@ def hash_ip(ip: str) -> str:
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
 
-def create_access_token(user_id: int, role: str) -> str:
+def create_access_token(user_id: int, role: str, groups: list[str] = []) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "sub": str(user_id),
         "role": role,
+        "groups": groups,
         "type": "access",
         "jti": secrets.token_hex(16),  # unique per token
         "exp": expire,

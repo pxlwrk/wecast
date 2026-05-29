@@ -32,6 +32,7 @@ class EpisodeList(BaseModel):
     status: str
     published_at: Optional[datetime]
     created_at: datetime
+    cover_image_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

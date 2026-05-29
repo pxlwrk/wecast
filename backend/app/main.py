@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import admin, auth, embed, recordings, shorts, shows, users, videos
+from app.api.v1 import admin, auth, embed, public, recordings, shorts, shows, users, videos
 from app.core.config import settings
 from app.core.database import engine
 from app.models import *  # noqa: F401, F403 – ensures all models register with Base
@@ -102,6 +102,7 @@ def create_app() -> FastAPI:
     app.include_router(shorts.router, prefix=API_PREFIX)
     app.include_router(embed.router, prefix=API_PREFIX)
     app.include_router(admin.router, prefix=API_PREFIX)
+    app.include_router(public.router, prefix=API_PREFIX)
 
     # ── Health probe (no auth) ───────────────────────────────────────────────────
     @app.get("/healthz", include_in_schema=False)
